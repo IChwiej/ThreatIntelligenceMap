@@ -18,11 +18,24 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(nlohmann_json)
 
+FetchContent_Declare(
+        httplib
+        GIT_REPOSITORY https://github.com/yhirose/cpp-httplib.git
+        GIT_TAG master
+)
+FetchContent_MakeAvailable(httplib)
+
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
-add_executable(ThreatIntelligenceMap ${SOURCES})
+list(FILTER SOURCES EXCLUDE REGEX "main\\.cpp$")
 
-target_link_libraries(ThreatIntelligenceMap PRIVATE Crow::Crow nlohmann_json::nlohmann_json)
+add_executable(ThreatIntelligenceMap src/main.cpp ${SOURCES})
+
+target_link_libraries(ThreatIntelligenceMap PRIVATE
+        Crow::Crow
+        nlohmann_json::nlohmann_json
+        httplib::httplib
+)
 target_include_directories(ThreatIntelligenceMap PRIVATE src)
 
 include(CTest)
@@ -31,10 +44,16 @@ include(GoogleTest)
 
 add_executable(tests
         tests/test_models.cpp
+        tests/test_scraper.cpp
+        ${SOURCES}
 )
 
 target_include_directories(tests PUBLIC src)
 
-target_link_libraries(tests GTest::gtest_main nlohmann_json::nlohmann_json)
+target_link_libraries(tests
+        GTest::gtest_main
+        nlohmann_json::nlohmann_json
+        httplib::httplib
+)
 enable_testing()
 gtest_discover_tests(tests)
