@@ -1,0 +1,19 @@
+{
+  "sources": [
+    {
+      "host": "http://lists.blocklist.de",
+      "path": "/lists/ssh.txt",
+      "threatType": "SSH_BRUTEFORCE"
+    },
+    {
+      "host": "http://lists.blocklist.de",
+      "path": "/lists/mail.txt",
+      "threatType": "SPAM"
+    },
+    {
+      "host": "http://lists.blocklist.de",
+      "path": "/lists/ftp.txt",
+      "threatType": "FTP"
+    }
+  ]
+}

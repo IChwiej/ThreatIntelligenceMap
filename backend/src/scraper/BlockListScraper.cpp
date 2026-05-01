@@ -1,18 +1,19 @@
 #include "BlockListScraper.hpp"
 #include <httplib.h>
+#include <iostream>
 
-
-BlocklistScraper::BlocklistScraper(const std::string &url) : sourceUrl(url) {
+BlocklistScraper::BlocklistScraper(const std::string &targetHost, const std::string &targetPath) : host(targetHost),
+    path(targetPath) {
 }
 
 std::string BlocklistScraper::fetchRawData() {
     std::string rawData = "";
 
-    httplib::Client cli(sourceUrl);
+    httplib::Client cli(host);
 
     cli.set_follow_location(true);
 
-    auto res = cli.Get("/lists/all.txt");
+    auto res = cli.Get(path);
 
     if (res) {
         if (res->status == 200) {

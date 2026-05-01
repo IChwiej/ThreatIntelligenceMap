@@ -4,10 +4,11 @@
 
 class BlocklistScraper : public IDataSource {
 private:
-    std::string sourceUrl;
+    std::string host;
+    std::string path;
 
 public:
-    BlocklistScraper(const std::string &url);
+    BlocklistScraper(const std::string &targetHost, const std::string &targetPath);
 
     std::string fetchRawData() override;
 };

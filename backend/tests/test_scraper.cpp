@@ -3,7 +3,7 @@
 
 
 TEST(ScraperTests, BlockList) {
-    BlocklistScraper scraper("https://lists.blocklist.de");
+    BlocklistScraper scraper("https://lists.blocklist.de", "/lists/ssh.txt");
     std::string result = scraper.fetchRawData();
     EXPECT_FALSE(result.empty()) << "Empty string";
     std::cout << "\n--- WYNIK POBIERANIA ---" << std::endl;

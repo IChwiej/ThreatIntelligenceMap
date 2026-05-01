@@ -42,9 +42,10 @@ include(CTest)
 find_package(GTest REQUIRED)
 include(GoogleTest)
 
+file(GLOB_RECURSE TEST_SOURCES CONFIGURE_DEPENDS "tests/*.cpp")
+
 add_executable(tests
-        tests/test_models.cpp
-        tests/test_scraper.cpp
+        ${TEST_SOURCES}
         ${SOURCES}
 )
 
