@@ -32,7 +32,7 @@ export function ThreatMap({threats}: ThreatMapProps) {
     return (
         <MapContainer
             center={[20, 0]}
-            zoom={2.5}
+            zoom={2.4}
             minZoom={2}
             maxBounds={worldBounds}
             maxBoundsViscosity={1.0}
