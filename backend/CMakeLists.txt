@@ -25,7 +25,7 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(httplib)
 
-file(GLOB_RECURSE SOURCES "src/*.cpp")
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "src/*.cpp" "src/*.hpp" "src/*.h")
 
 list(FILTER SOURCES EXCLUDE REGEX "main\\.cpp$")
 
