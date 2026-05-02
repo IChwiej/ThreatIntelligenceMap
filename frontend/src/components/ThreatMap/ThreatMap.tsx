@@ -49,7 +49,7 @@ export function ThreatMap({threats}: ThreatMapProps) {
                         key={threat.ipDecimal}
                         position={[threat.location.latitude, threat.location.longitude]}
                     >
-                        <Popup>
+                        <Popup className="select-none">
                             <div className="font-bold text-red-600">Atak z: {threat.ipAddress}</div>
                             <div className="text-xs">{threat.location.city}, {threat.location.country}</div>
                         </Popup>
