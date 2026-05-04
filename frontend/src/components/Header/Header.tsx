@@ -9,7 +9,7 @@ export function Header({threatCount}: HeaderProps) {
             <h1 className="flex items-center text-2xl font-bold tracking-wider"><img
                 src="/threat-intelligence-map.svg"
                 alt="Logo"
-                className="w-18 h-18 drop-shadow-md "/>ThreatIntelligenceMap</h1>
+                className="w-18 h-18 drop-shadow-md "/>Threat Intelligence Map</h1>
             <p className="text-slate-300 font-mono">
                 Wykryto ataków: <span className="text-red-500 font-bold text-xl">{threatCount}</span>
             </p>
