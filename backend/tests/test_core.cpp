@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "core/ConfigLoader.hpp"
+#include "core/IPConverter.hpp"
 #include <fstream>
 #include <cstdio>
 
@@ -30,4 +31,18 @@ TEST(CoreTests, ConfigLoaderHandlesMissingFile) {
     auto configs = ConfigLoader::loadConfig("jakis_nieistniejacy_plik_12345.json");
 
     EXPECT_TRUE(configs.empty());
+}
+
+TEST(CoreTests, IPv4ToDecimal) {
+    std::string ip = "192.168.0.1";
+    std::uint32_t ip_decimal = IPConverter::toDecimal(ip);
+
+    EXPECT_EQ(ip_decimal, 3232235521);
+}
+
+TEST(CoreTests, DecimalToIPv4) {
+    std::uint32_t ip_decimal = 3232235521;
+    std::string ip = IPConverter::fromDecimal(ip_decimal);
+
+    EXPECT_EQ(ip, "192.168.0.1");
 }
