@@ -4,7 +4,7 @@
 
 class IPConverter {
 public:
-    static
-    uint32_t toDecimal(const std::string &ip);
-    std::string fromDecimal(uint32_t dec);
+    static uint32_t toDecimal(const std::string &ip);
+
+    static std::string fromDecimal(uint32_t dec);
 };
