@@ -13,9 +13,6 @@ function App() {
                 <div className="flex-1 p-6 bg-transparent">
                     <div className="h-full w-full bg-slate-800 rounded-lg border border-slate-700 shadow-inner">
                         <ThreatMap threats={mockThreats}></ThreatMap>
-                        <div className="flex items-center justify-center h-full text-slate-500">
-                            Tu kiedyś będzie mapa
-                        </div>
                     </div>
                 </div>
 
