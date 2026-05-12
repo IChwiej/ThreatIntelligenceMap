@@ -29,13 +29,13 @@ FetchContent_MakeAvailable(httplib)
 FetchContent_Declare(
         IP2Location_Source
         GIT_REPOSITORY https://github.com/chrislim2888/IP2Location-C-Library.git
-        GIT_TAG master
+        GIT_TAG 8.6.1
 )
 
 FetchContent_GetProperties(IP2Location_Source)
 if (NOT ip2location_source_POPULATED)
     FetchContent_Populate(IP2Location_Source)
-    
+
     file(WRITE ${ip2location_source_SOURCE_DIR}/config.h "#define PACKAGE_VERSION \"8.6.1\"\n")
 endif ()
 
@@ -47,6 +47,13 @@ target_include_directories(IP2Location PUBLIC
         ${ip2location_source_SOURCE_DIR}/libIP2Location
 )
 
+FetchContent_Declare(
+        libpqxx
+        GIT_REPOSITORY https://github.com/jtv/libpqxx.git
+        GIT_TAG 7.9.0
+)
+FetchContent_MakeAvailable(libpqxx)
+
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "src/*.cpp" "src/*.hpp" "src/*.h")
 list(FILTER SOURCES EXCLUDE REGEX "main\\.cpp$")
 
@@ -57,6 +64,7 @@ target_link_libraries(ThreatIntelligenceMap PRIVATE
         nlohmann_json::nlohmann_json
         httplib::httplib
         IP2Location
+        pqxx
 )
 target_include_directories(ThreatIntelligenceMap PRIVATE src)
 
@@ -78,6 +86,7 @@ target_link_libraries(tests
         nlohmann_json::nlohmann_json
         httplib::httplib
         IP2Location
+        pqxx
 )
 
 enable_testing()

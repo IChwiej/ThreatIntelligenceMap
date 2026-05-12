@@ -14,6 +14,8 @@ public:
     std::string ipAddress;
     std::string threatType;
 
+    ThreatRecord() = default;
+
     ThreatRecord(uint32_t ipDec, std::string ip, std::string type, GeoLocation loc)
         : ipDecimal(ipDec), ipAddress(ip), threatType(type), location(loc) {
     }
