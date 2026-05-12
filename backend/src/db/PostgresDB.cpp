@@ -16,19 +16,21 @@ bool PostgresDB::saveBatch(const std::vector<ThreatRecord> &records) {
 
         for (auto const &record: records) {
             GeoLocation loc = record.getGeoLocation();
-            w.exec_params(
+            w.exec(
                 "INSERT INTO threat_records "
                 "(ip_address, ip_decimal, threat_type, country, city, latitude, longitude, geom) "
                 "VALUES ($1, $2, $3, $4, $5, $6, $7, ST_SetSRID(ST_MakePoint($8, $9), 4326))",
-                record.ipAddress,
-                record.ipDecimal,
-                record.threatType,
-                loc.country,
-                loc.city,
-                loc.latitude,
-                loc.longitude,
-                loc.longitude,
-                loc.latitude
+                pqxx::params{
+                    record.ipAddress,
+                    record.ipDecimal,
+                    record.threatType,
+                    loc.country,
+                    loc.city,
+                    loc.latitude,
+                    loc.longitude,
+                    loc.longitude,
+                    loc.latitude
+                }
             );
         }
 
@@ -54,11 +56,11 @@ std::vector<ThreatRecord> PostgresDB::getRecords(const std::string &bounds) {
 
         pqxx::nontransaction w(c);
 
-        pqxx::result r = w.exec_params(
+        pqxx::result r = w.exec(
             "SELECT ip_address, ip_decimal, threat_type, country, city, latitude, longitude "
             "FROM threat_records "
             "WHERE geom && ST_MakeEnvelope($1, $2, $3, $4, 4326)",
-            minLon, minLat, maxLon, maxLat
+            pqxx::params{minLon, minLat, maxLon, maxLat}
         );
 
         for (auto const &row: r) {

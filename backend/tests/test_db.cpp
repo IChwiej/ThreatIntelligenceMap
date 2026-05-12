@@ -20,7 +20,7 @@ protected:
             pqxx::work w(c);
 
 
-            w.exec_params("DELETE FROM threat_records WHERE threat_type = $1", testMarker);
+            w.exec("DELETE FROM threat_records WHERE threat_type = $1", pqxx::params{testMarker});
             w.commit();
         } catch (const std::exception &e) {
             std::cerr << "Blad podczas sprzatania po testach: " << e.what() << std::endl;
