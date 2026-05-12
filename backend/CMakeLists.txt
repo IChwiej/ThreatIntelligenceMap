@@ -34,7 +34,7 @@ FetchContent_Declare(
 
 FetchContent_GetProperties(IP2Location_Source)
 if (NOT ip2location_source_POPULATED)
-    FetchContent_Populate(IP2Location_Source)
+    FetchContent_MakeAvailable(IP2Location_Source)
 
     file(WRITE ${ip2location_source_SOURCE_DIR}/config.h "#define PACKAGE_VERSION \"8.6.1\"\n")
 endif ()
@@ -50,7 +50,7 @@ target_include_directories(IP2Location PUBLIC
 FetchContent_Declare(
         libpqxx
         GIT_REPOSITORY https://github.com/jtv/libpqxx.git
-        GIT_TAG 7.9.0
+        GIT_TAG master
 )
 FetchContent_MakeAvailable(libpqxx)
 
