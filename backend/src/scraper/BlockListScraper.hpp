@@ -10,5 +10,7 @@ private:
 public:
     BlocklistScraper(const std::string &targetHost, const std::string &targetPath);
 
+    void setTarget(const std::string &newHost, const std::string &newPath) override;
+
     std::string fetchRawData() override;
 };

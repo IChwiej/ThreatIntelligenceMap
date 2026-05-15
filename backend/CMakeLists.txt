@@ -59,6 +59,8 @@ list(FILTER SOURCES EXCLUDE REGEX "main\\.cpp$")
 
 add_executable(ThreatIntelligenceMap src/main.cpp ${SOURCES})
 
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
 target_link_libraries(ThreatIntelligenceMap PRIVATE
         Crow::Crow
         nlohmann_json::nlohmann_json

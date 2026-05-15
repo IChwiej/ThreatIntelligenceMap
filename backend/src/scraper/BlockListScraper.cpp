@@ -6,6 +6,11 @@ BlocklistScraper::BlocklistScraper(const std::string &targetHost, const std::str
     path(targetPath) {
 }
 
+void BlocklistScraper::setTarget(const std::string &newHost, const std::string &newPath) {
+    host = newHost;
+    path = newPath;
+}
+
 std::string BlocklistScraper::fetchRawData() {
     std::string rawData = "";
 

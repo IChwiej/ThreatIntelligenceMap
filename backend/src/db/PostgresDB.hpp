@@ -1,9 +1,10 @@
 #pragma once
 #include <string>
 #include <vector>
+#include "IDataBase.hpp"
 #include "models/ThreatRecord.hpp"
 
-class PostgresDB {
+class PostgresDB : public IDataBase {
 private:
     std::string connectionString;
 

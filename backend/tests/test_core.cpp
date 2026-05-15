@@ -1,8 +1,46 @@
 #include <gtest/gtest.h>
 #include "core/ConfigLoader.hpp"
 #include "core/IPConverter.hpp"
+#include "core/DataPipeline.hpp"
+#include "scraper/IDataSource.hpp"
+#include "geo/IGeoProvider.hpp"
+#include "db/IDataBase.hpp"
+#include "models/GeoLocation.hpp"
+#include "models/ThreatRecord.hpp"
 #include <fstream>
 #include <cstdio>
+#include <vector>
+
+class FakeDataSource : public IDataSource {
+public:
+    void setTarget(const std::string &newHost, const std::string &newPath) override {
+    }
+
+    std::string fetchRawData() override {
+        return "192.168.1.5";
+    }
+};
+
+class FakeGeoProvider : public IGeoProvider {
+public:
+    GeoLocation getLocation(uint32_t ipDec) override {
+        return GeoLocation{52.23, 21.01, "Poland", "Warsaw"};
+    }
+};
+
+class FakeDatabase : public IDataBase {
+public:
+    std::vector<ThreatRecord> savedRecords;
+
+    bool saveBatch(const std::vector<ThreatRecord> &records) override {
+        savedRecords = records;
+        return true;
+    }
+
+    std::vector<ThreatRecord> getRecords(const std::string &bounds) override {
+        return savedRecords;
+    }
+};
 
 TEST(CoreTests, ConfigLoaderParsesJsonCorrectly) {
     std::string testFilePath = "test_config_temp.json";
@@ -45,4 +83,23 @@ TEST(CoreTests, DecimalToIPv4) {
     std::string ip = IPConverter::fromDecimal(ip_decimal);
 
     EXPECT_EQ(ip, "192.168.0.1");
+}
+
+TEST(CoreTests, DataPipeline) {
+    FakeDataSource fakeSource;
+    FakeGeoProvider fakeGeo;
+    FakeDatabase fakeDb;
+
+    DataPipeline pipeline(&fakeSource, &fakeGeo, &fakeDb);
+    std::vector<ScraperConfig> testConfigs = {
+        {"http://test.com", "/test.txt", "BotnetThreat"}
+    };
+
+    pipeline.run(testConfigs);
+
+
+    ASSERT_EQ(fakeDb.savedRecords.size(), 1);
+    EXPECT_EQ(fakeDb.savedRecords[0].ipAddress, "192.168.1.5");
+    EXPECT_EQ(fakeDb.savedRecords[0].threatType, "BotnetThreat");
+    EXPECT_EQ(fakeDb.savedRecords[0].getGeoLocation().city, "Warsaw");
 }
