@@ -1,4 +1,5 @@
-import {MapContainer, TileLayer, Marker, Popup} from 'react-leaflet';
+import {useEffect, useState} from 'react';
+import {MapContainer, TileLayer, Marker, Popup, useMap} from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import type {LatLngBoundsExpression} from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -28,36 +29,99 @@ const createCustomClusterIcon = (cluster: { getChildCount: () => number }) => {
     });
 };
 
+function MapViewUpdater({center, onTransitionStart, onTransitionEnd}: {
+    center: [number, number],
+    onTransitionStart: () => void,
+    onTransitionEnd: () => void
+}) {
+    const map = useMap();
+
+    useEffect(() => {
+        const currentCenter = map.getCenter();
+        const targetCenter = L.latLng(center[0], center[1]);
+        const distance = currentCenter.distanceTo(targetCenter);
+
+        if (distance > 500000) {
+            onTransitionStart();
+
+            map.once('moveend', () => {
+                onTransitionEnd();
+            });
+
+            setTimeout(() => {
+                map.flyTo(center, map.getZoom(), {duration: 2});
+            }, 300);
+        } else {
+            map.flyTo(center, map.getZoom());
+        }
+    }, [center, map, onTransitionStart, onTransitionEnd]);
+
+    return null;
+}
+
 export function ThreatMap({threats}: ThreatMapProps) {
+    const [currentCenter, setCurrentCenter] = useState<[number, number]>([18.30, -64.83]);
+
+
+    const [isTransitioning, setIsTransitioning] = useState(false);
+
+    useEffect(() => {
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setCurrentCenter([position.coords.latitude, position.coords.longitude]);
+                },
+                (error) => {
+                    console.info("Nie użyto geolokalizacji, pozostawiono domyślne współrzędne.", error.message);
+                },
+                {timeout: 5000}
+            );
+        }
+    }, []);
+
     return (
-        <MapContainer
-            center={[20, 0]}
-            zoom={2.4}
-            minZoom={2}
-            maxBounds={worldBounds}
-            maxBoundsViscosity={1.0}
-            className="h-full w-full z-0 bg-slate-800"
-        >
+        <div className="relative h-full w-full">
 
-            <TileLayer
-                url="https://tiles.stadiamaps.com/tiles/stamen_toner_dark/{z}/{x}/{y}{r}.png"
-            />
+            <div
+                className={`absolute inset-0 z-50 bg-slate-950/90 transition-opacity duration-500 ease-in-out flex items-center justify-center pointer-events-none 
+                    ${isTransitioning ? 'opacity-100' : 'opacity-0'}`}
+            >
+                <div className="text-xl text-red-500 font-semibold">Pobieranie Twojej lokalizacji...</div>
+            </div>
 
-            <MarkerClusterGroup chunkedLoading={true} iconCreateFunction={createCustomClusterIcon}>
-                {threats.map((threat) => (
-                    <Marker
-                        key={threat.ipDecimal}
-                        position={[threat.location.latitude, threat.location.longitude]}
-                    >
-                        <Popup className="select-none">
-                            <div className="font-bold text-red-600">Atak z: {threat.ipAddress}</div>
-                            <div className="text-xs">{threat.location.city}, {threat.location.country}</div>
-                        </Popup>
-                    </Marker>
-                ))}
-            </MarkerClusterGroup>
+            <MapContainer
+                center={currentCenter}
+                zoom={16}
+                minZoom={2}
+                maxBounds={worldBounds}
+                maxBoundsViscosity={1.0}
+                className="h-full w-full z-0 bg-slate-800"
+            >
+                <MapViewUpdater
+                    center={currentCenter}
+                    onTransitionStart={() => setIsTransitioning(true)}
+                    onTransitionEnd={() => setIsTransitioning(false)}
+                />
 
+                <TileLayer
+                    url="https://tiles.stadiamaps.com/tiles/stamen_toner_dark/{z}/{x}/{y}{r}.png"
+                />
 
-        </MapContainer>
+                <MarkerClusterGroup chunkedLoading={true} iconCreateFunction={createCustomClusterIcon}>
+                    {threats.map((threat) => (
+                        <Marker
+                            key={threat.ipDecimal}
+                            position={[threat.location.latitude, threat.location.longitude]}
+                        >
+                            <Popup className="select-none">
+                                <div className="font-bold text-red-600">Atak z: {threat.ipAddress}</div>
+                                <div className="text-xs">{threat.location.city}, {threat.location.country}</div>
+                            </Popup>
+                        </Marker>
+                    ))}
+                </MarkerClusterGroup>
+
+            </MapContainer>
+        </div>
     );
 }
