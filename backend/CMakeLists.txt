@@ -84,6 +84,7 @@ add_executable(tests
 target_include_directories(tests PUBLIC src)
 
 target_link_libraries(tests
+        Crow::Crow
         GTest::gtest_main
         nlohmann_json::nlohmann_json
         httplib::httplib
