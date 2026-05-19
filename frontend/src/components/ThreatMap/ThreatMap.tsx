@@ -115,7 +115,8 @@ export function ThreatMap({threats}: ThreatMapProps) {
                         >
                             <Popup className="select-none">
                                 <div className="font-bold text-red-600">Atak z: {threat.ipAddress}</div>
-                                <div className="text-xs">{threat.location.city}, {threat.location.country}</div>
+                                <div className="text-xs">{threat.location.city}, {threat.location.country} –
+                                    <span className="text-red-800"> {threat.threatType}</span></div>
                             </Popup>
                         </Marker>
                     ))}
