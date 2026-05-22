@@ -5,6 +5,8 @@
 
 
 class ApiServer {
+    friend class ApiTests;
+
 private:
     crow::App<crow::CORSHandler> app;
     IDataBase *db;

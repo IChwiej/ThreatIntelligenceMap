@@ -86,6 +86,7 @@ target_include_directories(tests PUBLIC src)
 target_link_libraries(tests
         Crow::Crow
         GTest::gtest_main
+        GTest::gmock
         nlohmann_json::nlohmann_json
         httplib::httplib
         IP2Location
