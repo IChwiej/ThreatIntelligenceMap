@@ -7,6 +7,9 @@
 #include "db/IDataBase.hpp"
 #include "models/GeoLocation.hpp"
 #include "models/ThreatRecord.hpp"
+#include "core/UpdateManager.hpp"
+#include <chrono>
+#include <thread>
 #include <fstream>
 #include <cstdio>
 #include <vector>
@@ -101,5 +104,44 @@ TEST(CoreTests, DataPipeline) {
     ASSERT_EQ(fakeDb.savedRecords.size(), 1);
     EXPECT_EQ(fakeDb.savedRecords[0].ipAddress, "192.168.1.5");
     EXPECT_EQ(fakeDb.savedRecords[0].threatType, "BotnetThreat");
+    EXPECT_EQ(fakeDb.savedRecords[0].getGeoLocation().city, "Warsaw");
+}
+
+TEST(CoreTests, UpdateManagerStartsAndStopsCleanly) {
+    FakeDataSource fakeSource;
+    FakeGeoProvider fakeGeo;
+    FakeDatabase fakeDb;
+    DataPipeline pipeline(&fakeSource, &fakeGeo, &fakeDb);
+
+    std::vector<ScraperConfig> testConfigs = {
+        {"http://test.com", "/test.txt", "BotnetThreat"}
+    };
+
+    UpdateManager manager(&pipeline, 1, testConfigs);
+    manager.start();
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    manager.stop();
+
+    SUCCEED();
+}
+
+TEST(CoreTests, UpdateManagerExecutesPipeline) {
+    FakeDataSource fakeSource;
+    FakeGeoProvider fakeGeo;
+    FakeDatabase fakeDb;
+    DataPipeline pipeline(&fakeSource, &fakeGeo, &fakeDb);
+
+    std::vector<ScraperConfig> testConfigs = {
+        {"http://test.com", "/test.txt", "ManagerThreat"}
+    };
+
+    UpdateManager manager(&pipeline, 24, testConfigs);
+    manager.start();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    manager.stop();
+
+    ASSERT_GE(fakeDb.savedRecords.size(), 1);
+    EXPECT_EQ(fakeDb.savedRecords[0].ipAddress, "192.168.1.5");
+    EXPECT_EQ(fakeDb.savedRecords[0].threatType, "ManagerThreat");
     EXPECT_EQ(fakeDb.savedRecords[0].getGeoLocation().city, "Warsaw");
 }
