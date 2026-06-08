@@ -11,7 +11,8 @@ CREATE TABLE IF NOT EXISTS threat_records (
     longitude NUMERIC(10, 6),
     -- Specjalna kolumna geograficzna (Punkt w formacie WGS84)
     geom geometry(Point, 4326),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (ip_address, threat_type)
 );
 
 

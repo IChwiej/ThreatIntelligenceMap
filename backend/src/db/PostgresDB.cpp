@@ -19,7 +19,8 @@ bool PostgresDB::saveBatch(const std::vector<ThreatRecord> &records) {
             w.exec(
                 "INSERT INTO threat_records "
                 "(ip_address, ip_decimal, threat_type, country, city, latitude, longitude, geom) "
-                "VALUES ($1, $2, $3, $4, $5, $6, $7, ST_SetSRID(ST_MakePoint($8, $9), 4326))",
+                "VALUES ($1, $2, $3, $4, $5, $6, $7, ST_SetSRID(ST_MakePoint($8, $9), 4326))"
+                "ON CONFLICT (ip_address, threat_type) DO NOTHING",
                 pqxx::params{
                     record.ipAddress,
                     record.ipDecimal,
