@@ -45,6 +45,12 @@ interface StackPopup {
     threats: ThreatRecord[];
 }
 
+interface HoverTooltip {
+    screenX: number;
+    screenY: number;
+    html: string;
+}
+
 
 const mapStyle = {
     version: 8 as const,
@@ -94,7 +100,7 @@ function clusterRadius(count: number): number {
 }
 
 function coordKey(lon: number, lat: number): string {
-    return `${lon.toFixed(4)},${lat.toFixed(4)}`;
+    return `${Math.round(lon * 10000)}_${Math.round(lat * 10000)}`;
 }
 
 function getThreatFields(t: ThreatRecord) {
@@ -105,13 +111,6 @@ function getThreatFields(t: ThreatRecord) {
         country: t.location?.country ?? 'Nieznany kraj',
     };
 }
-
-const tooltipStyle = {
-    backgroundColor: '#0f172a', border: '1px solid #334155',
-    borderRadius: '6px', padding: '10px', color: 'white',
-    fontFamily: 'inherit', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.5)',
-};
-
 
 const fetchCache = new Map<string, ThreatRecord[]>();
 
@@ -157,6 +156,7 @@ export function ThreatMap({threats, onThreatsUpdate}: ThreatMapProps) {
     const [clusterDots, setClusterDots] = useState<ClusterDot[]>([]);
     const [clusterReady, setClusterReady] = useState(false);
     const [stackPopup, setStackPopup] = useState<StackPopup | null>(null);
+    const [hoverTooltip, setHoverTooltip] = useState<HoverTooltip | null>(null);
 
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const workerRef = useRef<Worker | null>(null);
@@ -188,7 +188,6 @@ export function ThreatMap({threats, onThreatsUpdate}: ThreatMapProps) {
                 const zoom = Math.floor(pendingZoom.current ?? 2);
                 pendingZoom.current = null;
                 if (clusterModeRef.current) {
-
                     w.postMessage({type: 'getClusters', payload: {zoom}});
                 } else {
                     setClusterReady(true);
@@ -220,10 +219,6 @@ export function ThreatMap({threats, onThreatsUpdate}: ThreatMapProps) {
                 setClusterReady(true);
                 return;
             }
-
-            if (type === 'expansionZoom') {
-
-            }
         };
 
         return () => w.terminate();
@@ -241,12 +236,12 @@ export function ThreatMap({threats, onThreatsUpdate}: ThreatMapProps) {
     }, [threats]);
 
 
+    const currentIntZoom = Math.floor(viewState.zoom);
+
     useEffect(() => {
         if (!clusterMode || !clusterReady || !workerRef.current) return;
-        const zoom = Math.floor(viewState.zoom);
-        workerRef.current.postMessage({type: 'getClusters', payload: {zoom}});
-
-    }, [viewState.zoom]);
+        workerRef.current.postMessage({type: 'getClusters', payload: {zoom: currentIntZoom}});
+    }, [currentIntZoom, clusterMode, clusterReady]);
 
 
     useEffect(() => {
@@ -259,7 +254,6 @@ export function ThreatMap({threats, onThreatsUpdate}: ThreatMapProps) {
             const zoom = Math.floor(viewState.zoom);
             workerRef.current.postMessage({type: 'getClusters', payload: {zoom}});
         } else {
-
             pendingZoom.current = Math.floor(viewState.zoom);
         }
 
@@ -299,13 +293,24 @@ export function ThreatMap({threats, onThreatsUpdate}: ThreatMapProps) {
         try {
             const vp = new WebMercatorViewport({...vs, width: window.innerWidth, height: window.innerHeight});
             const b = vp.getBounds();
-            const bw = b[2] - b[0], bh = b[3] - b[1];
-            const west = Math.max(-180, b[0] - bw * 0.5);
-            const south = Math.max(-90, b[1] - bh * 0.5);
-            const east = Math.min(180, b[2] + bw * 0.5);
-            const north = Math.min(90, b[3] + bh * 0.5);
+
+            let west, south, east, north;
+
+            if (vs.zoom < 3.5) {
+                west = -180;
+                south = -90;
+                east = 180;
+                north = 90;
+            } else {
+                const bw = b[2] - b[0], bh = b[3] - b[1];
+                west = Math.max(-180, b[0] - bw * 0.5);
+                south = Math.max(-90, b[1] - bh * 0.5);
+                east = Math.min(180, b[2] + bw * 0.5);
+                north = Math.min(90, b[3] + bh * 0.5);
+            }
 
             const key = roundedBoundsKey(west, south, east, north);
+
             if (fetchCache.has(key)) {
                 onThreatsUpdate(fetchCache.get(key)!);
                 return;
@@ -323,16 +328,11 @@ export function ThreatMap({threats, onThreatsUpdate}: ThreatMapProps) {
         }
     }, [onThreatsUpdate]);
 
-
-    useEffect(() => {
-        void fetchThreats(viewState);
-    }, []);
-
     const onViewStateChange = useCallback(({viewState: vs}: { viewState: MapViewState }) => {
         setViewState(prev => ({...vs, minZoom: prev.minZoom, maxZoom: prev.maxZoom}));
         setStackPopup(null);
         if (timeoutRef.current) clearTimeout(timeoutRef.current);
-        timeoutRef.current = setTimeout(() => void fetchThreats(vs), 500);
+        timeoutRef.current = setTimeout(() => void fetchThreats(vs), 150);
     }, [fetchThreats]);
 
 
@@ -361,7 +361,6 @@ export function ThreatMap({threats, onThreatsUpdate}: ThreatMapProps) {
             return;
         }
 
-
         if (!object.isCluster && object.threat) {
             const lon = normaliseLon(object.threat.location?.longitude ?? 0);
             const lat = object.threat.location?.latitude ?? 0;
@@ -384,38 +383,35 @@ export function ThreatMap({threats, onThreatsUpdate}: ThreatMapProps) {
     }, [stackMap]);
 
 
-    const getTooltip = useCallback(({object}: PickingInfo<ClusterDot | ThreatRecord>) => {
-        if (!object) return null;
+    const onHover = useCallback(({object, x, y}: PickingInfo<ClusterDot | ThreatRecord>) => {
+        if (!object) {
+            setHoverTooltip(null);
+            return;
+        }
+
+        let html = '';
 
         if ('isCluster' in object) {
             if (object.isCluster) {
-                return {
-                    html: `<div style="font-weight:bold;color:#ef4444;margin-bottom:4px;">Klaster: ${object.count} ataków</div><div style="font-size:10px;color:#6b7280;">Kliknij aby przybliżyć</div>`,
-                    style: tooltipStyle,
-                };
-            }
-            if (object.threat) {
+                html = `<div style="font-weight:bold;color:#ef4444;margin-bottom:4px;">Klaster: ${object.count} ataków</div><div style="font-size:10px;color:#6b7280;">Kliknij aby przybliżyć</div>`;
+            } else if (object.threat) {
                 const t = object.threat;
                 const {ip, threat, city, country} = getThreatFields(t);
                 const lon = normaliseLon(t.location?.longitude ?? 0);
                 const stack = stackMap.get(coordKey(lon, t.location?.latitude ?? 0))?.length ?? 1;
                 const hint = stack > 1 ? `<div style="font-size:10px;color:#f59e0b;margin-top:4px;">+${stack - 1} innych ataków — kliknij</div>` : '';
-                return {
-                    html: `<div style="font-weight:bold;color:#ef4444;margin-bottom:4px;">Atak z: ${ip}</div><div style="font-size:12px;color:#9ca3af;">${city}, ${country}</div><div style="font-size:10px;color:#6b7280;margin-top:6px;">Typ: ${threat}</div>${hint}`,
-                    style: tooltipStyle
-                };
+                html = `<div style="font-weight:bold;color:#ef4444;margin-bottom:4px;">Atak z: ${ip}</div><div style="font-size:12px;color:#9ca3af;">${city}, ${country}</div><div style="font-size:10px;color:#6b7280;margin-top:6px;">Typ: ${threat}</div>${hint}`;
             }
+        } else {
+            const t = object as ThreatRecord;
+            const {ip, threat, city, country} = getThreatFields(t);
+            const lon = normaliseLon(t.location?.longitude ?? 0);
+            const stack = stackMap.get(coordKey(lon, t.location?.latitude ?? 0))?.length ?? 1;
+            const hint = stack > 1 ? `<div style="font-size:10px;color:#f59e0b;margin-top:4px;">+${stack - 1} innych ataków — kliknij</div>` : '';
+            html = `<div style="font-weight:bold;color:#ef4444;margin-bottom:4px;">Atak z: ${ip}</div><div style="font-size:12px;color:#9ca3af;">${city}, ${country}</div><div style="font-size:10px;color:#6b7280;margin-top:6px;">Typ: ${threat}</div>${hint}`;
         }
 
-        const t = object as ThreatRecord;
-        const {ip, threat, city, country} = getThreatFields(t);
-        const lon = normaliseLon(t.location?.longitude ?? 0);
-        const stack = stackMap.get(coordKey(lon, t.location?.latitude ?? 0))?.length ?? 1;
-        const hint = stack > 1 ? `<div style="font-size:10px;color:#f59e0b;margin-top:4px;">+${stack - 1} innych ataków — kliknij</div>` : '';
-        return {
-            html: `<div style="font-weight:bold;color:#ef4444;margin-bottom:4px;">Atak z: ${ip}</div><div style="font-size:12px;color:#9ca3af;">${city}, ${country}</div><div style="font-size:10px;color:#6b7280;margin-top:6px;">Typ: ${threat}</div>${hint}`,
-            style: tooltipStyle
-        };
+        setHoverTooltip(html ? {screenX: x ?? 0, screenY: y ?? 0, html} : null);
     }, [stackMap]);
 
 
@@ -434,6 +430,7 @@ export function ThreatMap({threats, onThreatsUpdate}: ThreatMapProps) {
                     radiusUnits: 'pixels',
                     stroked: true, filled: true, pickable: true,
                     onClick: onClusterClick,
+                    onHover: onHover,
                     updateTriggers: {getRadius: clusterDots, getFillColor: clusterDots},
                 }),
                 new TextLayer<ClusterDot>({
@@ -466,10 +463,11 @@ export function ThreatMap({threats, onThreatsUpdate}: ThreatMapProps) {
                 radiusUnits: 'pixels',
                 stroked: true, filled: true, pickable: true,
                 onClick: onRawClick,
+                onHover: onHover,
                 updateTriggers: {getPosition: threats},
             }),
         ];
-    }, [clusterMode, clusterDots, threats, onClusterClick, onRawClick]);
+    }, [clusterMode, clusterDots, threats, onClusterClick, onRawClick, onHover]);
 
 
     return (
@@ -496,6 +494,10 @@ export function ThreatMap({threats, onThreatsUpdate}: ThreatMapProps) {
                 <StackPopupPanel popup={stackPopup} onClose={() => setStackPopup(null)}/>
             )}
 
+            {hoverTooltip && (
+                <HoverTooltipPanel tooltip={hoverTooltip}/>
+            )}
+
             <DeckGL
                 views={MAP_VIEW}
                 viewState={viewState}
@@ -511,7 +513,6 @@ export function ThreatMap({threats, onThreatsUpdate}: ThreatMapProps) {
                     doubleClickZoom: true
                 }}
                 layers={layers}
-                getTooltip={getTooltip}
                 style={{width: '100%', height: '100%'}}
             >
                 <MapGl mapStyle={mapStyle} reuseMaps/>
@@ -538,20 +539,131 @@ interface StackPopupPanelProps {
     onClose: () => void;
 }
 
-function StackPopupPanel({popup, onClose}: StackPopupPanelProps) {
-    const POPUP_W = 320;
-    const POPUP_H = 400;
-    const GAP = 12;
+const TOOLTIP_GAP = 14;
 
-    const left = Math.min(popup.screenX + GAP, window.innerWidth - POPUP_W - GAP);
-    const top = Math.min(popup.screenY + GAP, window.innerHeight - POPUP_H - GAP);
+interface HoverTooltipPanelProps {
+    tooltip: HoverTooltip;
+}
 
-    const {city, country} = getThreatFields(popup.threats[0]);
+function HoverTooltipPanel({tooltip}: HoverTooltipPanelProps) {
+    const ref = useRef<HTMLDivElement>(null);
+    const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
+
+    useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+
+        const recalc = () => {
+            const container = el.parentElement;
+            if (!container) return;
+
+            const w = el.offsetWidth;
+            const h = el.offsetHeight;
+            const cW = container.clientWidth;
+            const cH = container.clientHeight;
+
+            let left = tooltip.screenX + TOOLTIP_GAP;
+            let top = tooltip.screenY + TOOLTIP_GAP;
+
+            if (left + w > cW - TOOLTIP_GAP) left = tooltip.screenX - w - TOOLTIP_GAP;
+            left = Math.max(TOOLTIP_GAP, Math.min(left, cW - w - TOOLTIP_GAP));
+
+            if (top + h > cH - TOOLTIP_GAP) top = tooltip.screenY - h - TOOLTIP_GAP;
+            top = Math.max(TOOLTIP_GAP, Math.min(top, cH - h - TOOLTIP_GAP));
+
+            setPos({left, top});
+        };
+
+        const ro = new ResizeObserver(recalc);
+        ro.observe(el);
+        recalc();
+        return () => ro.disconnect();
+    }, [tooltip.screenX, tooltip.screenY, tooltip.html]);
 
     return (
         <div
+            ref={ref}
+            className="absolute z-30 pointer-events-none"
+            style={{
+                left: pos?.left ?? tooltip.screenX + TOOLTIP_GAP,
+                top: pos?.top ?? tooltip.screenY + TOOLTIP_GAP,
+                opacity: pos ? 1 : 0,
+                backgroundColor: '#0f172a',
+                border: '1px solid #334155',
+                borderRadius: '6px',
+                padding: '10px',
+                color: 'white',
+                fontFamily: 'inherit',
+                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.5)',
+                fontSize: '13px',
+                maxWidth: '260px',
+                transition: 'opacity 0.08s ease-in-out',
+            }}
+            dangerouslySetInnerHTML={{__html: tooltip.html}}
+        />
+    );
+}
+
+
+const POPUP_W = 320;
+const POPUP_MAX_H = 400;
+const GAP = 12;
+
+function StackPopupPanel({popup, onClose}: StackPopupPanelProps) {
+    const popupRef = useRef<HTMLDivElement>(null);
+    const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+
+    const {city, country} = getThreatFields(popup.threats[0]);
+
+    useEffect(() => {
+        const el = popupRef.current;
+        if (!el) return;
+
+        const recalc = () => {
+            const container = el.parentElement;
+            if (!container) return;
+
+            const containerW = container.clientWidth;
+            const containerH = container.clientHeight;
+            const popupH = Math.min(el.scrollHeight, POPUP_MAX_H);
+
+            let left = popup.screenX + GAP;
+            let top = popup.screenY + GAP;
+
+            if (left + POPUP_W > containerW - GAP) {
+                left = popup.screenX - POPUP_W - GAP;
+            }
+            left = Math.max(GAP, Math.min(left, containerW - POPUP_W - GAP));
+
+            if (top + popupH > containerH - GAP) {
+                top = popup.screenY - popupH - GAP;
+            }
+            top = Math.max(GAP, Math.min(top, containerH - popupH - GAP));
+
+            setPosition({left, top});
+        };
+
+        const ro = new ResizeObserver(recalc);
+        ro.observe(el);
+        recalc();
+
+        return () => ro.disconnect();
+    }, [popup.screenX, popup.screenY, popup.threats.length]);
+
+    return (
+        <div
+            ref={popupRef}
             className="absolute z-40 rounded-xl border border-slate-700 shadow-2xl overflow-hidden flex flex-col"
-            style={{left, top, width: POPUP_W, maxHeight: POPUP_H, background: '#0f172a'}}
+            style={{
+                left: position?.left ?? popup.screenX + GAP,
+                top: position?.top ?? popup.screenY + GAP,
+                width: POPUP_W,
+                maxHeight: POPUP_MAX_H,
+                background: '#0f172a',
+                opacity: position ? 1 : 0,
+                pointerEvents: position ? 'auto' : 'none',
+                transition: 'opacity 0.1s ease-in-out',
+            }}
             onClick={e => e.stopPropagation()}
         >
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700"
