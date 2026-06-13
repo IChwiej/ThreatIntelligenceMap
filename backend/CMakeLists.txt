@@ -61,12 +61,17 @@ add_executable(ThreatIntelligenceMap src/main.cpp ${SOURCES})
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
+find_package(ZLIB REQUIRED)
+
+set(CROW_FEATURES "compression")
+
 target_link_libraries(ThreatIntelligenceMap PRIVATE
         Crow::Crow
         nlohmann_json::nlohmann_json
         httplib::httplib
         IP2Location
         pqxx
+        ZLIB::ZLIB
 )
 target_include_directories(ThreatIntelligenceMap PRIVATE src)
 
@@ -91,6 +96,7 @@ target_link_libraries(tests
         httplib::httplib
         IP2Location
         pqxx
+        ZLIB::ZLIB
 )
 
 enable_testing()

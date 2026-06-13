@@ -1,8 +1,8 @@
 #pragma once
 #include "db/IDataBase.hpp"
+#define CROW_ENABLE_COMPRESSION
 #include "../crow-src/include/crow.h"
 #include "../crow-src/include/crow/middlewares/cors.h"
-
 
 class ApiServer {
     friend class ApiTests;

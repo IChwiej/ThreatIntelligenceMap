@@ -19,23 +19,16 @@ void ApiServer::setupRoutes() {
         }
 
         std::string bounds(bounds_param);
-        std::vector<ThreatRecord> records = db->getRecords(bounds);
-        std::string jsonResponse = "[";
-        for (size_t i = 0; i < records.size(); ++i) {
-            jsonResponse += records[i].toJSON();
-            if (i < records.size() - 1) {
-                jsonResponse += ",";
-            }
-        }
-        jsonResponse += "]";
 
+        std::string jsonResponse = db->getRecordsAsJson(bounds);
 
         crow::response res(200, jsonResponse);
         res.set_header("Content-Type", "application/json");
+
         return res;
     });
 }
 
 void ApiServer::start(int port) {
-    app.port(port).multithreaded().run();
+    app.port(port).use_compression(crow::compression::algorithm::GZIP).multithreaded().run();
 }

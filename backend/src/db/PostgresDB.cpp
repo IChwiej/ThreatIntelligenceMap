@@ -87,3 +87,48 @@ std::vector<ThreatRecord> PostgresDB::getRecords(const std::string &bounds) {
 
     return result;
 }
+
+std::string PostgresDB::getRecordsAsJson(const std::string &bounds) {
+    double minLon = 0.0, minLat = 0.0, maxLon = 0.0, maxLat = 0.0;
+    char comma;
+
+    std::stringstream ss(bounds);
+    ss >> minLon >> comma >> minLat >> comma >> maxLon >> comma >> maxLat;
+
+    try {
+        thread_local std::unique_ptr<pqxx::connection> c_ptr;
+
+        if (!c_ptr || !c_ptr->is_open()) {
+            c_ptr = std::make_unique<pqxx::connection>(connectionString);
+        }
+
+        pqxx::nontransaction w(*c_ptr);
+
+        pqxx::result r = w.exec(
+            "SELECT COALESCE(json_agg("
+            "  json_build_object("
+            "    'ipAddress', ip_address,"
+            "    'ipDecimal', ip_decimal,"
+            "    'threatType', threat_type,"
+            "    'location', json_build_object("
+            "      'country', country,"
+            "      'city', city,"
+            "      'latitude', latitude,"
+            "      'longitude', longitude"
+            "    )"
+            "  )"
+            "), '[]'::json)::text "
+            "FROM threat_records "
+            "WHERE geom && ST_MakeEnvelope($1, $2, $3, $4, 4326)",
+            pqxx::params{minLon, minLat, maxLon, maxLat}
+        );
+
+        if (!r.empty() && !r[0][0].is_null()) {
+            return r[0][0].as<std::string>();
+        }
+    } catch (const std::exception &e) {
+        std::cerr << "Error retrieving JSON from PostGIS: " << e.what() << std::endl;
+    }
+
+    return "[]";
+}
