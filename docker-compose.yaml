@@ -1,0 +1,55 @@
+services:
+  db:
+    image: postgis/postgis:15-3.3-alpine
+    container_name: threat_intelligence_db
+    restart: always
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_DB=threat_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./backend/docker/init.sql:/docker-entrypoint-initdb.d/init.sql:z
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U admin -d threat_db" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: threat_intelligence_backend
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=admin
+      - DB_PASSWORD=admin
+      - DB_NAME=threat_db
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: threat_intelligence_frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app:z
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

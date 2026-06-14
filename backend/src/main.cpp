@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <exception>
+#include <cstdlib>
 #include "core/ConfigLoader.hpp"
 #include "core/DataPipeline.hpp"
 #include "core/UpdateManager.hpp"
@@ -13,15 +14,27 @@ int main() {
     try {
         std::cout << "Start\n";
 
-        std::string configPath = "../data/config.json";
+        std::string configPath = "data/config.json";
         std::cout << "Loading config: " << configPath << "\n";
         std::vector<ScraperConfig> configs = ConfigLoader::loadConfig(configPath);
 
         std::cout << "Initializing Database\n";
-        PostgresDB db("host=localhost dbname=threat_db user=admin password=admin");
+        std::string dbHost = getenv("DB_HOST") ? getenv("DB_HOST") : "db";
+        std::string dbName = getenv("DB_NAME") ? getenv("DB_NAME") : "threat_db";
+        std::string dbUser = getenv("DB_USER") ? getenv("DB_USER") : "admin";
+        std::string dbPassword = getenv("DB_PASSWORD") ? getenv("DB_PASSWORD") : "admin";
+        std::string dbPort = getenv("DB_PORT") ? getenv("DB_PORT") : "5432";
+
+        std::string connStr = "host=" + dbHost +
+                              " port=" + dbPort +
+                              " dbname=" + dbName +
+                              " user=" + dbUser +
+                              " password=" + dbPassword;
+
+        PostgresDB db(connStr);
         BlocklistScraper scraper;
 
-        std::string geoDbPath = "../data/IP2LOCATION-LITE-DB5.BIN";
+        std::string geoDbPath = "data/IP2LOCATION-LITE-DB5.BIN";
         std::cout << "Loading IP2Location Database: " << geoDbPath << "\n";
         IP2LocationProvider geoProvider(geoDbPath);
         DataPipeline pipeline(&scraper, &geoProvider, &db);
