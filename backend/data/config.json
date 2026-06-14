@@ -14,6 +14,16 @@
       "host": "http://lists.blocklist.de",
       "path": "/lists/ftp.txt",
       "threatType": "FTP"
+    },
+    {
+      "host": "http://lists.blocklist.de",
+      "path": "/lists/sip.txt",
+      "threatType": "SIP"
+    },
+    {
+      "host": "http://lists.blocklist.de",
+      "path": "/lists/bots.txt",
+      "threatType": "BOTS"
     }
   ]
 }

@@ -524,10 +524,10 @@ export function ThreatMap({threats, onThreatsUpdate}: ThreatMapProps) {
 
 const THREAT_COLOURS: Record<string, string> = {
     SSH_BRUTEFORCE: '#ef4444',
-    PORT_SCAN: '#f97316',
+    FTP: '#40f916',
     SPAM: '#eab308',
-    MALWARE: '#a855f7',
-    DDOS: '#3b82f6',
+    BOTS: '#de7e1d',
+    SIP: '#3b82f6',
 };
 
 function badgeColour(type: string): string {
