@@ -316,7 +316,7 @@ export function ThreatMap({threats, onThreatsUpdate}: ThreatMapProps) {
                 return;
             }
 
-            const res = await fetch(`http://localhost:8080/api/threats?bounds=${west},${south},${east},${north}`);
+            const res = await fetch(`http://${window.location.hostname}:8080/api/threats?bounds=${west},${south},${east},${north}`);
             if (res.ok) {
                 const data = await res.json() as ThreatRecord[];
                 fetchCache.set(key, data);
